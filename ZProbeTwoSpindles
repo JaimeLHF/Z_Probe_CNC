@@ -1,0 +1,95 @@
+CurrentFeed = GetOemDRO(818)
+DoSpinStop()
+
+ZMove = 60.00 ' Distancia total em mm para a sonda procurar pelo contato
+ZOffset = 8.60  ' Altura da base da sonda em mm (0.00 se for fazer o zero em cima de material metálico)
+ZSal = 40.00  ' Sobe o Z em 40mm após o zeramento
+
+MsgBox("verifique o botão: SP1/Aut. deve estar selecionado")
+
+
+StopZmove = 0
+FinishiProbe = 0
+
+If GetOemLed(825) = 0 Then
+
+    ' Seleciona o Spindle 01 e inicia o zeramento
+    CODE "M7"
+
+    DoOEMButton(1010)
+    Code "G4 P2.5"
+    Code "G31 Z-20" & ZMove & "F150"
+
+    While IsMoving()
+        Sleep(100)
+    Wend
+
+    Probepos = GetVar(2002)
+
+    If Probepos = -ZMove Then
+        responce = MsgBox("** ERRO, sonda não localizada **", 4, "Probe ** ERRO **")
+        Code "G0 Z10" ' Em caso de erro, sobe o Z em 10mm
+        StopZmove = 1
+        Code "F" & CurrentFeed
+    End If
+
+    If StopZmove = 0 Then
+        Code "G0 Z" & Probepos
+
+        While IsMoving()
+            Sleep(100)
+        Wend
+
+        Call SetDro(2, ZOffset)
+        Code "G4 P1"
+        Code "G0 Z" & ZSal
+    End If
+
+    CODE "M9"
+    CODE "G0 X+170"
+    DoOEMButton(1010)
+    Code "G4 P2.5"
+    Code "G31 Z-20" & ZMove & "F150"
+
+    While IsMoving()
+        Sleep(100)
+    Wend
+
+    Probepos = GetVar(2002)
+
+    If Probepos = -ZMove Then
+        responce = MsgBox("** ERRO, sonda não localizada **", 4, "Probe ** ERRO **")
+        Code "G0 Z10" ' Em caso de erro, sobe o Z em 10mm
+        StopZmove = 1
+        Code "F" & CurrentFeed
+    End If
+
+    If StopZmove = 0 Then
+        Code "G0 Z" & Probepos
+
+        While IsMoving()
+            Sleep(100)
+        Wend
+
+        Call SetDro(2, ZOffset)
+        Code "G4 P1"
+        Code "G0 Z" & ZSal
+        CODE "G92 X0 Y0"
+        FinishiProbe = 1
+
+
+        Code "(Eixo Z referenciado)"
+        Code "F" & CurrentFeed
+
+        'Colocar Spindle no X0Y0 se os eixos Z estiverem zerados
+            If FinishiProbe = 1 Then
+                CODE "G92 X170"
+                CODE "G0X0"
+                CODE "G0X44Y70"
+                CODE "G92X0Y0"
+            End If
+        MsgBox("Máquina Pronta para Uso")
+    End If
+Else
+    MsgBox("Erro! Probe já acionada, verifique!")
+End If
